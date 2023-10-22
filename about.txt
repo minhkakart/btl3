@@ -1,0 +1,26 @@
+https://www.kaggle.com/datasets/arjunbhasin2013/ccdata
+
+Giới thiệu về tập dữ liệu
+Trường hợp này yêu cầu phát triển phân khúc khách hàng để xác định chiến lược tiếp thị. Bộ
+dữ liệu mẫu tóm tắt hành vi sử dụng của khoảng 9000 chủ thẻ tín dụng đang hoạt động trong 6 tháng qua. Tệp ở cấp độ khách hàng với 18 biến hành vi.
+
+Sau đây là Từ điển dữ liệu cho tập dữ liệu Thẻ tín dụng: -
+
+CUST_ID : Nhận dạng chủ thẻ tín dụng (Phân loại)
+SỐ DƯ : Số dư còn lại trong tài khoản của họ để mua hàng
+BALANCE_FREQUENCY : Tần suất cập nhật Số dư, điểm từ 0 đến 1 (1 = cập nhật thường xuyên, 0 = không cập nhật thường xuyên)
+PURCHASES : Số tiền mua được thực hiện từ tài khoản
+ONEOFF_PURCHASES : Số tiền mua tối đa được thực hiện một lần
+INSTALLMENTS_PURCHASES : Số tiền mua được thực hiện trả góp
+CASH_ADVANCE : Tiền mặt do người dùng trả trước
+PURCHASES_FREQUENCY : Tần suất mua hàng được thực hiện, điểm từ 0 đến 1 (1 = mua thường xuyên, 0 = không mua thường xuyên)
+ONEOFFPURCHASESFREQUENCY : Tần suất mua hàng diễn ra một lần (1 = mua thường xuyên, 0 = không mua thường xuyên)
+PURCHASESINSTALLMENTFREQUENCY : Tần suất mua hàng trả góp được thực hiện như thế nào (1 = thực hiện thường xuyên, 0 = không được thực hiện thường xuyên)
+CASHADVANCEFREQUENCY : Tần suất trả trước tiền mặt
+CASHADVANCETRX : Số lượng giao dịch được thực hiện bằng "Tiền mặt trước"
+PURCHASES_TRX : Số giao dịch mua hàng được thực hiện
+CREDIT_LIMIT : Giới hạn thẻ tín dụng cho người dùng
+PAYMENTS : Số tiền thanh toán được thực hiện bởi người dùng
+MINIMUM_PAYMENTS : Số tiền thanh toán tối thiểu do người dùng thực
+hiện PRCFULLPAYMENT : Phần trăm thanh toán đầy đủ do người dùng thanh toán
+TENURE : Thời hạn dịch vụ thẻ tín dụng cho người dùng
