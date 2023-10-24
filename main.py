@@ -44,8 +44,10 @@ def select_file_callback(_, app_data):
 def open_predict_window_callback():
     dpg.disable_item(predict_btn)                                                   # Vô hiệu hóa button
     dpg.show_item('predict_window')                                                 # Hiển thị cửa sổ
+    dpg.delete_item(item='predict_window', children_only=True,slot=1)
     dpg.add_button(label='Predict', callback=btn_submit_predict_callback,           # Thêm button xác nhận dự đoán thông tin
                     width=240, height=50, parent='predict_window', pos=(720,35))    
+    
     for i in list_field_name:                                                       # Thêm các ô input tương ứng với tập data đã chọn
         dpg.add_input_text(width=250,label=str(i), tag=str(i),
                             parent='predict_window')
@@ -184,6 +186,7 @@ with dpg.theme() as global_theme:
         dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
 
 dpg.bind_theme(global_theme)
+dpg.show_item_registry()
 dpg.create_viewport(title='Credit Card Dataset for Clustering', width=WIDTH, height=HEIGHT, x_pos=int(CENTER_X), y_pos=int(CENTER_Y), clear_color=(106, 176, 222, 255))
 dpg.setup_dearpygui()
 dpg.show_viewport()
