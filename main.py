@@ -65,11 +65,12 @@ def btn_cluster_callback():
         # print(labels)
         gr = list(set(labels))                                                      # Tạo danh sách các nhóm (clusters)
         gr.sort()                                                                   # Sắp xép từ nhỏ đến lớn
-        count = list(map(lambda i: labels.count(i),gr))                             # Tạo danh sách số lượng phần tử của nhóm tương ứng
+        count_train = list(map(lambda i: labels.count(i),gr))                             # Tạo danh sách số lượng phần tử của nhóm tương ứng
 
         x_max = len(gr)                                                             # Lấy ra số lượng nhóm (clusters)
-        y_max = max(count)+20                                                       # Lấy ra giá trị cao nhất của số phần tử mỗi nhóm
+        y_max = max(count_train)+20                                                       # Lấy ra giá trị cao nhất của số phần tử mỗi nhóm
 
+        ## Dùng chung cho biểu đồ train và test
         label_pair = tuple(map(lambda item: (str(item), item), gr))                 # Tạo danh sách nhãn cho trục x
         dpg.set_axis_ticks(xAxis, label_pair)                                       # Gán nhãn cho trục x
 
@@ -77,10 +78,10 @@ def btn_cluster_callback():
         dpg.set_axis_limits(xAxis, -1, x_max)                                       # Giới hạn độ dài trục x
         dpg.set_axis_limits(yAxis, 0, y_max)                                        # Giới hạn độ dài trục y
         
-        dpg.set_value(item='bar_series_tag',value=(gr,count))                       # Gán giá trị cho biểu đồ cột của biểu đồ (kmean_plot_train)
+        dpg.set_value(item='bar_series_tag',value=(gr,count_train))                       # Gán giá trị cho biểu đồ cột của biểu đồ (kmean_plot_train)
         dpg.delete_item(item=kmean_plot_train, children_only=True, slot=2)          # Xóa text của biểu đồ (kmean_plot_train) đang ở slot 2
         for i in gr:
-            dpg.draw_text((i-0.2,count[i]+10),str(count[i]),                        # Viết text lên biểu đồ (kmean_plot_train)
+            dpg.draw_text((i-0.2,count_train[i]+10),str(count_train[i]),                        # Viết text lên biểu đồ (kmean_plot_train)
                           size=0.3,parent=kmean_plot_train)
 
         ## score
@@ -92,7 +93,30 @@ def btn_cluster_callback():
             dpg.draw_text((i*2+0.7,val+0.19),str(int(val*10000)/10000),             # Giống mấy dòng trên
                           size=0.2,parent='score_plot_train')
             
+            
         ### Xử lí và thêm dữ liệu cho biểu đồ test data ở đây ###
+        dpg.set_axis_ticks('xAxis_test', label_pair)
+        dpg.set_axis_limits('xAxis_test', -1, x_max)
+
+        labels_test = KMeans_clustering.predict(test).tolist()
+        # print('labels_test:',labels_test)
+        count_test = list(map(lambda i: labels_test.count(i), gr))
+
+        ### Tạm không dùng
+        # test_score = [silhouette_score(test, labels_test),davies_bouldin_score(test, labels_test)]
+        # dpg.set_value(item='score_bar_series_test', value=([1, 3],test_score))
+        # dpg.delete_item(item='score_plot_test', children_only=True, slot=2)
+        # for i, val in enumerate(test_score):
+        #     dpg.draw_text((i*2+0.7,val+0.19),str(int(val*10000)/10000),
+        #                   size=0.2,parent='score_plot_test')
+        
+        dpg.set_axis_limits('yAxis_test', 0, max(count_test)+10)
+        dpg.set_value(item='bar_series_tag_test',value=(gr,count_test))
+        dpg.delete_item(item='plot_test', children_only=True, slot=2)
+        for i in gr:
+            dpg.draw_text((i-0.2,count_test[i]+6),str(count_test[i]),
+                          size=0.3,parent='plot_test')
+
 
 ## Hàm xử lý khi nhấn dự doán cho mẫu dữ liệu mới
 def btn_submit_predict_callback():
@@ -143,7 +167,7 @@ with dpg.window(label="Tutorial", width=WIDTH, height=HEIGHT,pos=(CENTER_X, CENT
         dpg.set_axis_ticks(dpg.last_item(), (('Silhouette score', 1),('Davies-Bouldin score', 3)))
         dpg.set_axis_limits(dpg.last_item(), 0, 4)
 
-        dpg.add_plot_axis(dpg.mvYAxis, label='Score (minium is good)',tag='score_y_axis_train')
+        dpg.add_plot_axis(dpg.mvYAxis, label='Score',tag='score_y_axis_train')
         dpg.set_axis_limits(dpg.last_item(), 0, 2)
         dpg.add_bar_series([],[],parent='score_y_axis_train', tag='score_bar_series')
 
@@ -151,37 +175,30 @@ with dpg.window(label="Tutorial", width=WIDTH, height=HEIGHT,pos=(CENTER_X, CENT
     ## Test data ##
     dpg.add_text('Test data', pos=(20, 490))
     # Plot group
-    with dpg.plot(label='K-means clustering', height=360, width=640,pos=(10,510)):
+    with dpg.plot(label='K-means clustering', height=360, width=640,pos=(10,510), tag='plot_test'):
         # create x axis
-        dpg.add_plot_axis(dpg.mvXAxis, label='Group')
+        dpg.add_plot_axis(dpg.mvXAxis, label='Group', tag='xAxis_test')
         dpg.set_axis_limits(dpg.last_item(), -1, X_MAX+1)
         # create y axis
-        dpg.add_plot_axis(dpg.mvYAxis, label="Number of member")
+        dpg.add_plot_axis(dpg.mvYAxis, label="Number of member", tag='yAxis_test')
         dpg.set_axis_limits(dpg.last_item(), 0, Y_MAX+20)
-        dpg.add_bar_series([],[],weight=1,parent=yAxis,label='sdfsf',tag='bar_series_tag_test')
+        dpg.add_bar_series([],[],weight=1,parent='yAxis_test',label='sdfsf',tag='bar_series_tag_test')
 
-    # Plot score
-    with dpg.plot(label='Score', height=360, width=640, pos=(670,510), tag='score_plot_test'):
-        dpg.add_plot_axis(dpg.mvXAxis)
-        dpg.set_axis_ticks(dpg.last_item(), (('Silhouette score', 1),('Davies-Bouldin score', 3)))
-        dpg.set_axis_limits(dpg.last_item(), 0, 4)
+    # # Plot score
+    # with dpg.plot(label='Score', height=360, width=640, pos=(670,510), tag='score_plot_test'):
+    #     dpg.add_plot_axis(dpg.mvXAxis)
+    #     dpg.set_axis_ticks(dpg.last_item(), (('Silhouette score', 1),('Davies-Bouldin score', 3)))
+    #     dpg.set_axis_limits(dpg.last_item(), 0, 4)
 
-        dpg.add_plot_axis(dpg.mvYAxis, label='Score (minium is good)',tag='score_y_axis_test')
-        dpg.set_axis_limits(dpg.last_item(), 0, 2)
-        dpg.add_bar_series([],[],parent='score_y_axis_test', tag='score_bar_series_test')
+    #     dpg.add_plot_axis(dpg.mvYAxis, label='Score (minium is good)',tag='score_y_axis_test')
+    #     dpg.set_axis_limits(dpg.last_item(), 0, 2)
+    #     dpg.add_bar_series([],[],parent='score_y_axis_test', tag='score_bar_series_test')
 
     #######################
 
 with dpg.theme() as global_theme:
     with dpg.theme_component(dpg.mvAll):
-        dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (255, 140, 23))
         dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 10)
-
-    with dpg.theme_component(dpg.mvInputInt):
-        dpg.add_theme_color(dpg.mvThemeCol_FrameBg, (140, 255, 0))
-        dpg.add_theme_color(dpg.mvThemeCol_Text, (255, 0, 0))
-        dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
-
     with dpg.theme_component(dpg.mvButton):
         dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
 
