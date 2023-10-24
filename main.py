@@ -16,6 +16,7 @@ Y_MAX = 50
 
 data = []
 list_field_name = []
+example_values = []
 
 dpg.create_context()
 
@@ -32,6 +33,7 @@ def select_file_callback(_, app_data):
             list_field_name = data.columns.values                                   # Lấy giá trị của ô check box
             if(dpg.get_value(is_drop_first_col)):                                   # Nếu tích thì bỏ cột dầu tiên của dữ liệu
                 data = data.iloc[:,1:]          
+                list_field_name = list_field_name[1:]
             data = data.apply(LabelEncoder().fit_transform)                         # Encode dữ liệu tránh gặp chữ hoặc không phải số
 
             dpg.set_item_label(btn_select_file, file_name[0])                       # Hiển thị tên file đã chọn lên button
@@ -48,15 +50,17 @@ def open_predict_window_callback():
     dpg.add_button(label='Predict', callback=btn_submit_predict_callback,           # Thêm button xác nhận dự đoán thông tin
                     width=240, height=50, parent='predict_window', pos=(720,35))    
     
-    for i in list_field_name:                                                       # Thêm các ô input tương ứng với tập data đã chọn
-        dpg.add_input_text(width=250,label=str(i), tag=str(i),
-                            parent='predict_window')
+    for i, field_name in enumerate(list_field_name):                                                       # Thêm các ô input tương ứng với tập data đã chọn
+        dpg.add_input_text(width=250,label=str(field_name), tag=str(field_name),
+                            parent='predict_window', default_value=(example_values[i] if len(example_values) > 0 else ''))
 
 def btn_cluster_callback():
     if len(data):
 
         ## Tách và huấn luyện mô hình
         train,test = train_test_split(data, test_size=0.1,shuffle=False)
+        global example_values
+        example_values = test.iloc[0]
         global KMeans_clustering              # Dưới này để lấy giá trị từ input số lượng nhóm (clusters) #
         KMeans_clustering = KMeans(n_clusters=dpg.get_value(inp_number_of_group),algorithm='elkan',n_init='auto')
         KMeans_clustering.fit(train)
@@ -203,7 +207,7 @@ with dpg.theme() as global_theme:
         dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
 
 dpg.bind_theme(global_theme)
-dpg.show_item_registry()
+# dpg.show_item_registry()
 dpg.create_viewport(title='Credit Card Dataset for Clustering', width=WIDTH, height=HEIGHT, x_pos=int(CENTER_X), y_pos=int(CENTER_Y), clear_color=(106, 176, 222, 255))
 dpg.setup_dearpygui()
 dpg.show_viewport()
