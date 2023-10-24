@@ -89,7 +89,8 @@ def btn_cluster_callback():
         for i, val in enumerate(score):
             dpg.draw_text((i*2+0.7,val+0.19),str(int(val*10000)/10000),             # Giống mấy dòng trên
                           size=0.2,parent='score_plot_train')
-        # dpg.draw_text((1,0.5),text='test',size=0.2,parent='score_plot_train')
+            
+        ### Xử lí và thêm dữ liệu cho biểu đồ test data ở đây ###
 
 ## Hàm xử lý khi nhấn dự doán cho mẫu dữ liệu mới
 def btn_submit_predict_callback():
