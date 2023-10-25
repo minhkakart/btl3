@@ -27,15 +27,9 @@ def select_file_callback(_, app_data):
     if len(file_name) > 0:                                                          # Nếu chọn được file thì xử lý bên dưới
         try:
             file_path = str(selection[file_name[0]])                                # Lấy ra đường dẫn của file
-            global data                                                             # Tạo biến toàn cục data
-            data = pandas.read_csv(file_path)                                       # Đọc file csv, nếu không phải file csv thì xuống except
-            global list_field_name                                                  # Tạo biến toàn cục là danh sách tên dữ liệu   
-            list_field_name = data.columns.values                                   # Lấy giá trị của ô check box
-            if(dpg.get_value(is_drop_first_col)):                                   # Nếu tích thì bỏ cột dầu tiên của dữ liệu
-                data = data.iloc[:,1:]          
-                list_field_name = list_field_name[1:]
-            data = data.apply(LabelEncoder().fit_transform)                         # Encode dữ liệu tránh gặp chữ hoặc không phải số
-
+            global data_raw                                                             # Tạo biến toàn cục data
+            data_raw = pandas.read_csv(file_path)                                       # Đọc file csv, nếu không phải file csv thì xuống except
+            
             dpg.set_item_label(btn_select_file, file_name[0])                       # Hiển thị tên file đã chọn lên button
         except:
             dpg.set_item_label(btn_select_file, 'File is not supported!')           # File không hợp lệ thì hiện chữ này
@@ -44,19 +38,27 @@ def select_file_callback(_, app_data):
 
 ## Hàm xử lí khi nhấn mở cửa sổ dự đoán bộ dữ liệu mới
 def open_predict_window_callback():
-    dpg.disable_item(predict_btn)                                                   # Vô hiệu hóa button
+    disable_primary_window()
     dpg.show_item('predict_window')                                                 # Hiển thị cửa sổ
     dpg.delete_item(item='predict_window', children_only=True,slot=1)
     dpg.add_button(label='Predict', callback=btn_submit_predict_callback,           # Thêm button xác nhận dự đoán thông tin
                     width=240, height=50, parent='predict_window', pos=(720,35))    
     
     for i, field_name in enumerate(list_field_name):                                                       # Thêm các ô input tương ứng với tập data đã chọn
-        dpg.add_input_text(width=250,label=str(field_name), tag=str(field_name),
-                            parent='predict_window', default_value=(example_values[i] if len(example_values) > 0 else ''))
+        dpg.add_input_double(width=250,label=str(field_name), tag=str(field_name),
+                            parent='predict_window', default_value=(example_values.iloc[i]))
 
+# Hàm bắt đầu train mô hình
 def btn_cluster_callback():
-    if len(data):
+    global list_field_name                                                  # Tạo biến toàn cục là danh sách tên dữ liệu   
+    list_field_name = data_raw.columns.values  
+    data = data_raw                                                         # Lấy giá trị của ô check box
+    if(dpg.get_value(is_drop_first_col)):                                   # Nếu tích thì bỏ cột dầu tiên của dữ liệu
+        data = data_raw.iloc[:,1:]          
+        list_field_name = list_field_name[1:]
+    data = data.apply(LabelEncoder().fit_transform)                         # Encode dữ liệu tránh gặp chữ hoặc không phải số
 
+    if len(data):
         ## Tách và huấn luyện mô hình
         train,test = train_test_split(data, test_size=0.1,shuffle=False)
         global example_values
@@ -121,34 +123,56 @@ def btn_cluster_callback():
             dpg.draw_text((i-0.2,count_test[i]+6),str(count_test[i]),
                           size=0.3,parent='plot_test')
 
-
 ## Hàm xử lý khi nhấn dự doán cho mẫu dữ liệu mới
 def btn_submit_predict_callback():
-
     ## Xử lý các dữ liệu mới khi nhập xong ở đây ##
+    predict_data = []
+    for i in list_field_name:
+        predict_data.append(dpg.get_value(str(i)))
+    predict_data = [predict_data]
+    global predict_group
+    predict_group = KMeans_clustering.predict(predict_data)
+    dpg.show_item('alert_window')
+    dpg.draw_text(text=str(predict_group[0]),pos=(230, 70), size=100, parent='alert_window')
 
-    print('Đang dự đoán dữ liệu')
+def disable_primary_window():
+    dpg.disable_item(btn_select_file)
+    dpg.disable_item(inp_number_of_group)
+    dpg.disable_item(is_drop_first_col)
+    dpg.disable_item(clustering_btn)
+    dpg.disable_item(predict_btn)
+
+def enable_primary_window():
+    dpg.enable_item(btn_select_file)
+    dpg.enable_item(inp_number_of_group)
+    dpg.enable_item(is_drop_first_col)
+    dpg.enable_item(clustering_btn)
+    dpg.enable_item(predict_btn)
 
 ## Tạo cửa sổ chọn file (mặc định ẩn show=False)
 with dpg.file_dialog(directory_selector=False, show=False, callback=select_file_callback, file_count=1,
-                      tag="file_dialog_tag", width=700 ,height=400):
+                      tag="file_dialog_tag", width=700 ,height=400, modal=True):
     dpg.add_file_extension(".*")
 
 ## Tạo cửa sổ dự đoán cho mẫu dữ liệu mới (mặc định ẩn show=False)
 dpg.add_window(label='Predict group of customer', show=False, tag='predict_window',
-                pos=(200,100), width=980, height=550,on_close=lambda:dpg.enable_item(predict_btn))
+                pos=(200,100), width=980, height=550, on_close=enable_primary_window)
+
+## Hiển thị kết quả dự đoán
+with dpg.window(label='Predict group', show=False, width=540, height=300, tag='alert_window', pos=(420, 200), modal=True):
+    dpg.draw_text(text='Mau duoc phan loai vao nhom so:', pos=(10,10), size=30)
+    dpg.add_button(label='OK', width=520, height=60, callback=lambda:dpg.hide_item('alert_window'), pos=(10, 230))
     
 ## Tạo cửa sổ giao diện chính
 with dpg.window(label="Tutorial", width=WIDTH, height=HEIGHT,pos=(CENTER_X, CENTER_Y), no_scrollbar=True, tag="Primary Window"):
 
-    ## Thêm các button, check bõ cần thiết
+    ## Thêm các button, check box cần thiết
     btn_select_file = dpg.add_button(label="Select File", callback=lambda: dpg.show_item("file_dialog_tag"), pos=(10, 20), height=40)
     inp_number_of_group = dpg.add_input_int(label='Number of group', min_value=2, max_value=100, default_value=6, 
                                             pos=(400, 20), min_clamped=True, max_clamped=True, width=100)
-    is_drop_first_col = dpg.add_checkbox(label='Drop first column',default_value=True, pos=(400, 40))
+    is_drop_first_col = dpg.add_checkbox(label='Drop first column',default_value=True, pos=(400, 50))
     clustering_btn = dpg.add_button(label='Clustering data', pos=(700, 20), callback=btn_cluster_callback, height=40)
     predict_btn = dpg.add_button(label='Predict a customer', pos=(1000, 20), callback=open_predict_window_callback, height=40)
-
 
     #######################
     ### Tạo các biểu đồ ###
@@ -177,7 +201,7 @@ with dpg.window(label="Tutorial", width=WIDTH, height=HEIGHT,pos=(CENTER_X, CENT
 
     
     ## Test data ##
-    dpg.add_text('Test data', pos=(20, 490))
+    dpg.add_text('Test data', pos=(20, 485))
     # Plot group
     with dpg.plot(label='K-means clustering', height=360, width=640,pos=(10,510), tag='plot_test'):
         # create x axis
@@ -188,7 +212,7 @@ with dpg.window(label="Tutorial", width=WIDTH, height=HEIGHT,pos=(CENTER_X, CENT
         dpg.set_axis_limits(dpg.last_item(), 0, Y_MAX+20)
         dpg.add_bar_series([],[],weight=1,parent='yAxis_test',label='sdfsf',tag='bar_series_tag_test')
 
-    # # Plot score
+    ## Plot score
     # with dpg.plot(label='Score', height=360, width=640, pos=(670,510), tag='score_plot_test'):
     #     dpg.add_plot_axis(dpg.mvXAxis)
     #     dpg.set_axis_ticks(dpg.last_item(), (('Silhouette score', 1),('Davies-Bouldin score', 3)))
@@ -205,9 +229,8 @@ with dpg.theme() as global_theme:
         dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 10)
     with dpg.theme_component(dpg.mvButton):
         dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
-
 dpg.bind_theme(global_theme)
-# dpg.show_item_registry()
+dpg.set_global_font_scale(1.5)
 dpg.create_viewport(title='Credit Card Dataset for Clustering', width=WIDTH, height=HEIGHT, x_pos=int(CENTER_X), y_pos=int(CENTER_Y), clear_color=(106, 176, 222, 255))
 dpg.setup_dearpygui()
 dpg.show_viewport()
