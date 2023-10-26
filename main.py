@@ -1,5 +1,6 @@
 import dearpygui.dearpygui as dpg
 import pandas
+from random import randint
 from sklearn.cluster import KMeans
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import silhouette_score, davies_bouldin_score
@@ -48,6 +49,7 @@ def select_file_callback(_, app_data):
 
 ## Hàm xử lí khi nhấn mở cửa sổ dự đoán bộ dữ liệu mới
 def open_predict_window_callback():
+    example_values = test.iloc[randint(0, len(test)-1)]
     disable_primary_window()
     dpg.show_item('predict_window')                                                 # Hiển thị cửa sổ
     dpg.delete_item(item='predict_window', children_only=True,slot=1)
@@ -71,9 +73,9 @@ def btn_cluster_callback():
 
     if len(data):
         ## Tách và huấn luyện mô hình
+        global test
         train,test = train_test_split(data, test_size=0.1,shuffle=False)
-        global example_values
-        example_values = test.iloc[0]
+        
         global KMeans_clustering              # Dưới này để lấy giá trị từ input số lượng nhóm (clusters) #
         KMeans_clustering = KMeans(n_clusters=dpg.get_value(inp_number_of_group),algorithm='elkan',n_init='auto')
         KMeans_clustering.fit(train)
@@ -119,13 +121,6 @@ def btn_cluster_callback():
         # print('labels_test:',labels_test)
         count_test = list(map(lambda i: labels_test.count(i), gr))
 
-        ### Tạm không dùng
-        # test_score = [silhouette_score(test, labels_test),davies_bouldin_score(test, labels_test)]
-        # dpg.set_value(item='score_bar_series_test', value=([1, 3],test_score))
-        # dpg.delete_item(item='score_plot_test', children_only=True, slot=2)
-        # for i, val in enumerate(test_score):
-        #     dpg.draw_text((i*2+0.7,val+0.19),str(int(val*10000)/10000),
-        #                   size=0.2,parent='score_plot_test')
         
         dpg.set_axis_limits('yAxis_test', 0, max(count_test)+10)
         dpg.set_value(item='bar_series_tag_test',value=(gr,count_test))
@@ -133,6 +128,20 @@ def btn_cluster_callback():
         for i in gr:
             dpg.draw_text((i-0.2,count_test[i]+6),str(count_test[i]),
                           size=0.3,parent='plot_test')
+        
+        labels_test_group_count = len(set(labels_test))
+        if labels_test_group_count > 1:
+            ## Tạm không dùng
+            test_score = [silhouette_score(test, labels_test),davies_bouldin_score(test, labels_test)]
+            dpg.set_value(item='score_bar_series_test', value=([1, 3],test_score))
+            dpg.delete_item(item='score_plot_test', children_only=True, slot=2)
+            for i, val in enumerate(test_score):
+                dpg.draw_text((i*2+0.7,val+0.19),str(int(val*10000)/10000),
+                              size=0.2,parent='score_plot_test')
+        else:
+            dpg.delete_item('score_plot_test', children_only=True, slot=2)
+            dpg.set_value(item='score_bar_series_test', value=([],[]))
+            dpg.show_item('alert')
 
 ## Hàm xử lý khi nhấn dự doán cho mẫu dữ liệu mới
 def btn_submit_predict_callback():
@@ -143,8 +152,8 @@ def btn_submit_predict_callback():
     predict_data =[predict_data]
     global predict_group
     predict_group = KMeans_clustering.predict(predict_data)
-    dpg.show_item('alert_window')
-    dpg.draw_text(text=str(predict_group[0]),pos=(230, 70), size=100, parent='alert_window')
+    dpg.show_item('alert_group_window')
+    dpg.draw_text(text=str(predict_group[0]),pos=(230, 70), size=100, parent='alert_group_window', tag='group_predict_sanple')
 
 def disable_primary_window():
     dpg.disable_item(btn_select_file)
@@ -160,6 +169,10 @@ def enable_primary_window():
     dpg.enable_item(clustering_btn)
     dpg.enable_item(predict_btn)
 
+def close_alert_predict_window():
+    dpg.delete_item('group_predict_sanple')
+    dpg.hide_item('alert_group_window')
+
 ## Tạo cửa sổ chọn file (mặc định ẩn show=False)
 with dpg.file_dialog(directory_selector=False, show=False, callback=select_file_callback, file_count=1,
                       tag="file_dialog_tag", width=700 ,height=400, modal=True):
@@ -170,10 +183,15 @@ dpg.add_window(label='Predict group of customer', show=False, tag='predict_windo
                 pos=(200,100), width=980, height=550, on_close=enable_primary_window)
 
 ## Hiển thị kết quả dự đoán
-with dpg.window(label='Predict group', show=False, width=540, height=300, tag='alert_window', pos=(420, 200), modal=True, no_close=True):
+with dpg.window(label='Predict group', show=False, width=540, height=300, tag='alert_group_window', pos=(420, 200), modal=True, no_close=True):
     dpg.draw_text(text='Mau duoc phan loai vao nhom so:', pos=(10,10), size=30)
-    dpg.add_button(label='OK', width=520, height=60, callback=lambda:dpg.hide_item('alert_window'), pos=(10, 230))
+    dpg.add_button(label='OK', width=520, height=60, callback=close_alert_predict_window, pos=(10, 230))
     
+## Popup thông báo
+with dpg.window(label="Alert", show=False, popup=True, tag='alert'):
+    dpg.add_text(default_value='Tat ca du lieu test deu thuoc cung 1 nhom \n nen khong the tinh diem!',pos=(10, 40))
+    dpg.add_button(label='OK', width=450, height=90, pos=(6,120), callback=lambda:dpg.hide_item('alert'))
+
 ## Tạo cửa sổ giao diện chính
 with dpg.window(label="Tutorial", width=WIDTH, height=HEIGHT,pos=(CENTER_X, CENTER_Y), no_scrollbar=True, tag="Primary Window"):
 
@@ -228,14 +246,14 @@ with dpg.window(label="Tutorial", width=WIDTH, height=HEIGHT,pos=(CENTER_X, CENT
         dpg.add_bar_series([],[],weight=1,parent='yAxis_test',label='sdfsf',tag='bar_series_tag_test')
 
     ## Plot score
-    # with dpg.plot(label='Score', height=360, width=640, pos=(670,510), tag='score_plot_test'):
-    #     dpg.add_plot_axis(dpg.mvXAxis)
-    #     dpg.set_axis_ticks(dpg.last_item(), (('Silhouette score', 1),('Davies-Bouldin score', 3)))
-    #     dpg.set_axis_limits(dpg.last_item(), 0, 4)
+    with dpg.plot(label='Score', height=360, width=640, pos=(670,510), tag='score_plot_test'):
+        dpg.add_plot_axis(dpg.mvXAxis)
+        dpg.set_axis_ticks(dpg.last_item(), (('Silhouette score', 1),('Davies-Bouldin score', 3)))
+        dpg.set_axis_limits(dpg.last_item(), 0, 4)
 
-    #     dpg.add_plot_axis(dpg.mvYAxis, label='Score (minium is good)',tag='score_y_axis_test')
-    #     dpg.set_axis_limits(dpg.last_item(), 0, 2)
-    #     dpg.add_bar_series([],[],parent='score_y_axis_test', tag='score_bar_series_test')
+        dpg.add_plot_axis(dpg.mvYAxis, label='Score',tag='score_y_axis_test')
+        dpg.set_axis_limits(dpg.last_item(), 0, 2)
+        dpg.add_bar_series([],[],parent='score_y_axis_test', tag='score_bar_series_test')
 
     #######################
 
@@ -245,6 +263,7 @@ with dpg.theme() as global_theme:
     with dpg.theme_component(dpg.mvButton):
         dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
 dpg.bind_theme(global_theme)
+dpg.show_item_registry()
 dpg.set_global_font_scale(1.5)
 dpg.create_viewport(title='Credit Card Dataset for Clustering', width=WIDTH, height=HEIGHT, x_pos=int(CENTER_X), y_pos=int(CENTER_Y), clear_color=(106, 176, 222, 255))
 dpg.setup_dearpygui()
