@@ -263,7 +263,6 @@ with dpg.theme() as global_theme:
     with dpg.theme_component(dpg.mvButton):
         dpg.add_theme_style(dpg.mvStyleVar_FrameRounding, 5)
 dpg.bind_theme(global_theme)
-dpg.show_item_registry()
 dpg.set_global_font_scale(1.5)
 dpg.create_viewport(title='Credit Card Dataset for Clustering', width=WIDTH, height=HEIGHT, x_pos=int(CENTER_X), y_pos=int(CENTER_Y), clear_color=(106, 176, 222, 255))
 dpg.setup_dearpygui()
