@@ -27,12 +27,22 @@ def select_file_callback(_, app_data):
     if len(file_name) > 0:                                                          # Nếu chọn được file thì xử lý bên dưới
         try:
             file_path = str(selection[file_name[0]])                                # Lấy ra đường dẫn của file
-            global data_raw                                                             # Tạo biến toàn cục data
-            data_raw = pandas.read_csv(file_path)                                       # Đọc file csv, nếu không phải file csv thì xuống except
-            
+            global data_raw                                                         # Tạo biến toàn cục data
+            data_raw = pandas.read_csv(file_path)                                   # Đọc file csv, nếu không phải file csv thì xuống except
             dpg.set_item_label(btn_select_file, file_name[0])                       # Hiển thị tên file đã chọn lên button
+            enable_primary_window()
+
+            # Nếu file hợp lệ thì mở chức năng clustering và predict
+            dpg.enable_item(clustering_btn)
+            dpg.enable_item(predict_btn)
+
         except:
+            # Nếu file không hợp lệ thì vô hiệu hóa chức năng clustering và predict
+            dpg.disable_item(clustering_btn)
+            dpg.disable_item(predict_btn)
+
             dpg.set_item_label(btn_select_file, 'File is not supported!')           # File không hợp lệ thì hiện chữ này
+            
     else:
         dpg.set_item_label(btn_select_file, 'No file selected.')                    # Nếu không chọn file nào thì hiện chữ này
 
@@ -44,19 +54,20 @@ def open_predict_window_callback():
     dpg.add_button(label='Predict', callback=btn_submit_predict_callback,           # Thêm button xác nhận dự đoán thông tin
                     width=240, height=50, parent='predict_window', pos=(720,35))    
     
-    for i, field_name in enumerate(list_field_name):                                                       # Thêm các ô input tương ứng với tập data đã chọn
+    # print(example_values)
+    for i, field_name in enumerate(list_field_name):                                # Thêm các ô input tương ứng với tập data đã chọn
         dpg.add_input_double(width=250,label=str(field_name), tag=str(field_name),
                             parent='predict_window', default_value=(example_values.iloc[i]))
 
 # Hàm bắt đầu train mô hình
 def btn_cluster_callback():
-    global list_field_name                                                  # Tạo biến toàn cục là danh sách tên dữ liệu   
+    global list_field_name                                                          # Tạo biến toàn cục là danh sách tên dữ liệu   
     list_field_name = data_raw.columns.values  
-    data = data_raw                                                         # Lấy giá trị của ô check box
-    if(dpg.get_value(is_drop_first_col)):                                   # Nếu tích thì bỏ cột dầu tiên của dữ liệu
+    data = data_raw                                                                 # Lấy giá trị của ô check box
+    if(dpg.get_value(is_drop_first_col)):                                           # Nếu tích thì bỏ cột dầu tiên của dữ liệu
         data = data_raw.iloc[:,1:]          
         list_field_name = list_field_name[1:]
-    data = data.apply(LabelEncoder().fit_transform)                         # Encode dữ liệu tránh gặp chữ hoặc không phải số
+    data = data.apply(LabelEncoder().fit_transform)                                 # Encode dữ liệu tránh gặp chữ hoặc không phải số
 
     if len(data):
         ## Tách và huấn luyện mô hình
@@ -71,10 +82,10 @@ def btn_cluster_callback():
         # print(labels)
         gr = list(set(labels))                                                      # Tạo danh sách các nhóm (clusters)
         gr.sort()                                                                   # Sắp xép từ nhỏ đến lớn
-        count_train = list(map(lambda i: labels.count(i),gr))                             # Tạo danh sách số lượng phần tử của nhóm tương ứng
+        count_train = list(map(lambda i: labels.count(i),gr))                       # Tạo danh sách số lượng phần tử của nhóm tương ứng
 
         x_max = len(gr)                                                             # Lấy ra số lượng nhóm (clusters)
-        y_max = max(count_train)+20                                                       # Lấy ra giá trị cao nhất của số phần tử mỗi nhóm
+        y_max = max(count_train)+20                                                 # Lấy ra giá trị cao nhất của số phần tử mỗi nhóm
 
         ## Dùng chung cho biểu đồ train và test
         label_pair = tuple(map(lambda item: (str(item), item), gr))                 # Tạo danh sách nhãn cho trục x
@@ -84,10 +95,10 @@ def btn_cluster_callback():
         dpg.set_axis_limits(xAxis, -1, x_max)                                       # Giới hạn độ dài trục x
         dpg.set_axis_limits(yAxis, 0, y_max)                                        # Giới hạn độ dài trục y
         
-        dpg.set_value(item='bar_series_tag',value=(gr,count_train))                       # Gán giá trị cho biểu đồ cột của biểu đồ (kmean_plot_train)
+        dpg.set_value(item='bar_series_tag',value=(gr,count_train))                 # Gán giá trị cho biểu đồ cột của biểu đồ (kmean_plot_train)
         dpg.delete_item(item=kmean_plot_train, children_only=True, slot=2)          # Xóa text của biểu đồ (kmean_plot_train) đang ở slot 2
         for i in gr:
-            dpg.draw_text((i-0.2,count_train[i]+10),str(count_train[i]),                        # Viết text lên biểu đồ (kmean_plot_train)
+            dpg.draw_text((i-0.2,count_train[i]+10),str(count_train[i]),            # Viết text lên biểu đồ (kmean_plot_train)
                           size=0.3,parent=kmean_plot_train)
 
         ## score
@@ -129,7 +140,7 @@ def btn_submit_predict_callback():
     predict_data = []
     for i in list_field_name:
         predict_data.append(dpg.get_value(str(i)))
-    predict_data = [predict_data]
+    predict_data =[predict_data]
     global predict_group
     predict_group = KMeans_clustering.predict(predict_data)
     dpg.show_item('alert_window')
@@ -159,7 +170,7 @@ dpg.add_window(label='Predict group of customer', show=False, tag='predict_windo
                 pos=(200,100), width=980, height=550, on_close=enable_primary_window)
 
 ## Hiển thị kết quả dự đoán
-with dpg.window(label='Predict group', show=False, width=540, height=300, tag='alert_window', pos=(420, 200), modal=True):
+with dpg.window(label='Predict group', show=False, width=540, height=300, tag='alert_window', pos=(420, 200), modal=True, no_close=True):
     dpg.draw_text(text='Mau duoc phan loai vao nhom so:', pos=(10,10), size=30)
     dpg.add_button(label='OK', width=520, height=60, callback=lambda:dpg.hide_item('alert_window'), pos=(10, 230))
     
@@ -168,12 +179,16 @@ with dpg.window(label="Tutorial", width=WIDTH, height=HEIGHT,pos=(CENTER_X, CENT
 
     ## Thêm các button, check box cần thiết
     btn_select_file = dpg.add_button(label="Select File", callback=lambda: dpg.show_item("file_dialog_tag"), pos=(10, 20), height=40)
-    inp_number_of_group = dpg.add_input_int(label='Number of group', min_value=2, max_value=100, default_value=6, 
+    inp_number_of_group = dpg.add_input_int(label='Number of group', min_value=2, max_value=100, default_value=5, 
                                             pos=(400, 20), min_clamped=True, max_clamped=True, width=100)
     is_drop_first_col = dpg.add_checkbox(label='Drop first column',default_value=True, pos=(400, 50))
     clustering_btn = dpg.add_button(label='Clustering data', pos=(700, 20), callback=btn_cluster_callback, height=40)
     predict_btn = dpg.add_button(label='Predict a customer', pos=(1000, 20), callback=open_predict_window_callback, height=40)
 
+    # Chưa chọn file dữ liệu sẽ vô hiệu hóa chức năng clustering và predict
+    dpg.disable_item(clustering_btn)
+    dpg.disable_item(predict_btn)
+    
     #######################
     ### Tạo các biểu đồ ###
 
